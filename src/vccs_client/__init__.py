@@ -55,46 +55,100 @@ import urllib
 import urllib2
 import simplejson as json
 
-class VCCSAuthenticator():
-    def __init__(self, url='http://localhost:8550/authenticate'):
-        self.url = url
+class VCCSFactor():
 
-    def authenticate(self, plaintext, salt, user_id, credential_id):
+    def __init__(self):
+        pass
+
+    def to_dict(self):
+        raise NotImplementedError('Sub-class must implement to_tuple')
+
+class VCCSPasswordFactor(VCCSFactor):
+
+    def __init__(self, plaintext, credential_id, salt=None, log_rounds=12):
+        if salt is None:
+            salt = bcrypt.gensalt(log_rounds)
         if not salt.startswith('$2a$'):
             raise ValueError('Invalid salt (not bcrypt)')
+        self.salt = salt
+        self.credential_id = credential_id
         bcrypt_hashed = bcrypt.hashpw(plaintext, salt)
         # withhold bcrypt salt from authentication backends
-        H1 = bcrypt_hashed[len(salt):]
+        self.hash = bcrypt_hashed[len(salt):]
+        VCCSFactor.__init__(self)
 
-        auth_req = self._make_request('auth', H1, user_id, credential_id)
-        values = {'request': auth_req}
+    def to_dict(self):
+        res = {'type': 'password',
+               'H1': self.hash,
+               'credential_id': self.credential_id,
+               }
+        return res
 
+class VCCSAuthenticator():
+
+    def __init__(self, base_url='http://localhost:8550/'):
+        self.base_url = base_url
+
+    def authenticate(self, user_id, factors):
+        auth_req = self._make_request('auth', user_id, factors)
+
+        response = self._execute(auth_req, 'auth_response')
+        resp_auth = response['authenticated']
+        if type(resp_auth) != bool:
+            raise TypeError('Authenticated value type error : {!r}'.format(resp_auth))
+        return resp_auth == True
+
+    def add_credentials(self, user_id, factors):
+        add_creds_req = self._make_request('add_creds', user_id, factors)
+
+        response = self._execute(add_creds_req, 'add_creds_response')
+        success = response['success']
+        if type(success) != bool:
+            raise TypeError('Operation success value type error : {!r}'.format(success))
+        return success == True
+
+    def _execute(self, data, response_label):
+        """
+        Make a HTTP POST request to the authentication backend, and parse the result.
+
+        :params data: request as string (JSON)
+        :params response_label: 'auth_response' or 'add_creds_response'
+        :returns: data from response identified by key response_label - supposedly a dict
+        """
+        # make the request
+        if response_label == 'auth_response':
+            service = 'authenticate'
+        elif response_label == 'add_creds_response':
+            service = 'add_creds'
+        else:
+            raise ValueError('Unknown response_label {!r}'.format(response_label))
+        values = {'request': data}
         data = urllib.urlencode(values)
-        req = urllib2.Request(self.url, data)
+        req = urllib2.Request(self.base_url + service, data)
         response = urllib2.urlopen(req)
         body = response.read()
-        try:
-            resp = json.loads(body)
-            resp_ver = resp['auth_response']['version']
-            if resp_ver != 1:
-                raise AssertionError('Received response of unknown version {!r}'.format(resp_ver))
-            resp_auth = resp['auth_response']['authenticated']
-            if type(resp_auth) != bool:
-                raise TypeError('Authenticated value type error : {!r}'.format(resp_auth))
-            return resp_auth == True
-        except Exception:
-            raise
 
-    def _make_request(self, action, H1, user_id, credential_id):
+        # parse the response
+        resp = json.loads(body)
+        if not response_label in resp:
+            raise ValueError('Expected {!r} not found in parsed response'.format(response_label))
+        resp_ver = resp[response_label]['version']
+        if resp_ver != 1:
+            raise AssertionError('Received response of unknown version {!r}'.format(resp_ver))
+        return resp[response_label]
+
+    def _make_request(self, action, user_id, factors):
+        """
+        :params action: 'auth' or 'add_creds'
+        :params factors: list of VCCSFactor instances
+        :returns: request as string (JSON)
+        """
+        if not action in ['auth', 'add_creds']:
+            raise ValueError('Unknown action {!r}'.format(action))
         a = {action:
                  {'version': 1,
                   'user_id': user_id,
-                  'factors': [
-                    {'type': 'password',
-                     'H1': H1,
-                     'credential_id': credential_id,
-                     }
-                    ]
+                  'factors': [x.to_dict() for x in factors],
                   }
              }
         return json.dumps(a, sort_keys=True, indent=4)
