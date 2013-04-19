@@ -141,6 +141,8 @@ class VCCSOathFactor(VCCSFactor):
                    'digits': self.digits,
                    'oath_counter': self.oath_counter,
                    }
+        else:
+            raise ValueError('Unknown \'action\' value (not auth or add_creds)')
         for (k, v) in res.items():
             if v is None:
                 raise ValueError('{!r} property {!r} not provided'.format(action, k))
