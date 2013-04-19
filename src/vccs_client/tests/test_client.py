@@ -49,9 +49,55 @@ class TestVCCSClient(unittest.TestCase):
         Test creating a VCCSPasswordFactor instance.
         """
         f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
-        self.assertEqual(f.to_dict(),
+        self.assertEqual(f.to_dict('auth'),
                          {'type': 'password',
                           'credential_id': 4711,
                           'H1': '8A5TOXW92nt0AYKipKvn2brhEyCdsT.',
                           }
                          )
+
+    def test_OATH_factor_auth(self):
+        """
+        Test creating a VCCSOathFactor instance.
+        """
+        aead = 'aa' * 20
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, user_code='123456')
+        self.assertEqual(o.to_dict('auth'),
+                         {'type': 'oath-hotp',
+                          'credential_id': 4712,
+                          'user_code': '123456',
+                          }
+                         )
+
+    def test_OATH_factor_add(self):
+        """
+        Test creating a VCCSOathFactor instance for an add_creds request.
+        """
+        aead = 'aa' * 20
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead)
+        self.assertEqual(o.to_dict('add_creds'),
+                         {'aead': aead,
+                          'credential_id': 4712,
+                          'digits': 6,
+                          'nonce': '010203040506',
+                          'oath_counter': 0,
+                          'type': 'oath-hotp',
+                          }
+                         )
+
+    def test_missing_parts_of_OATH_factor(self):
+        """
+        Test creating a VCCSOathFactor instance with missing parts.
+        """
+        aead = 'aa' * 20
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', user_code='123456')
+        # missing AEAD
+        with self.assertRaises(ValueError):
+            o.to_dict('add_creds')
+
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, user_code='123456')
+        # with AEAD o should be OK
+        self.assertEquals(type(o.to_dict('add_creds')), dict)
+        # unknown to_dict 'action' should raise
+        with self.assertRaises(ValueError):
+            o.to_dict('bad_action')
