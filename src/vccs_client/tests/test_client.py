@@ -90,7 +90,7 @@ class TestVCCSClient(unittest.TestCase):
         Test creating a VCCSOathFactor instance with missing parts.
         """
         aead = 'aa' * 20
-        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', user_code='123456')
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, user_code='123456')
         # missing AEAD
         with self.assertRaises(ValueError):
             o.to_dict('add_creds')
