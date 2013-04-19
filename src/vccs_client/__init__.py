@@ -35,8 +35,30 @@
 """
 the VCCS authentication client package
 
-Copyright (c) 2012, 2013 NORDUnet A/S
+Copyright (c) 2013 NORDUnet A/S
 See the source file for complete license statement.
+
+
+Short usage, see the README for details :
+
+Add credential, and authenticate with correct password :
+
+  >>> import vccs_client
+  >>> f = vccs_client.VCCSPasswordFactor('password', credential_id=4712)
+  >>> a = vccs_client.VCCSClient(base_url='http://localhost:8550/')
+  >>> a.add_credentials('ft@example.net', [f])
+  True
+  >>>>
+
+Authenticate with incorrect password :
+
+  >>> a.authenticate('ft@example.net', [f])
+  True
+  >>> incorrect_f = vccs_client.VCCSPasswordFactor('foobar', credential_id=4712)
+  >>> a.authenticate('ft@example.net', [incorrect_f])
+  False
+  >>>
+
 
 """
 
@@ -56,12 +78,15 @@ import urllib2
 import simplejson as json
 
 class VCCSFactor():
-
+    """
+    Base class for authentication factors. Do not use directly.
+    """
     def __init__(self):
         pass
 
     def to_dict(self):
         raise NotImplementedError('Sub-class must implement to_tuple')
+
 
 class VCCSPasswordFactor(VCCSFactor):
 
@@ -84,7 +109,8 @@ class VCCSPasswordFactor(VCCSFactor):
                }
         return res
 
-class VCCSAuthenticator():
+
+class VCCSClient():
 
     def __init__(self, base_url='http://localhost:8550/'):
         self.base_url = base_url
@@ -99,6 +125,13 @@ class VCCSAuthenticator():
         return resp_auth == True
 
     def add_credentials(self, user_id, factors):
+        """
+        Ask the authentication backend to add one or more credentials to it's
+        private credential store.
+        :params user_id: persistent user identifier as string
+        :params factors: list of VCCSFactor() instances
+        :returns: boolean, success or not
+        """
         add_creds_req = self._make_request('add_creds', user_id, factors)
 
         response = self._execute(add_creds_req, 'add_creds_response')
