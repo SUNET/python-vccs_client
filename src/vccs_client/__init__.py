@@ -102,11 +102,48 @@ class VCCSPasswordFactor(VCCSFactor):
         self.hash = bcrypt_hashed[len(salt):]
         VCCSFactor.__init__(self)
 
-    def to_dict(self):
+    def to_dict(self, _action):
         res = {'type': 'password',
                'H1': self.hash,
                'credential_id': self.credential_id,
                }
+        return res
+
+
+class VCCSOathFactor(VCCSFactor):
+
+    def __init__(self, oath_type, credential_id, user_code=None, nonce=None,
+                 aead=None, digits=6, oath_counter=0):
+        if oath_type not in ['oath-totp', 'oath-hotp']:
+            raise ValueError('Invalid OATH type (not oath-totp or oath-hotp)')
+        self.oath_type = oath_type
+        self.credential_id = credential_id
+        self.user_code = user_code
+        self.nonce = nonce
+        self.aead = aead
+        self.digits = digits
+        self.oath_counter = oath_counter
+        VCCSFactor.__init__(self)
+
+    def to_dict(self, action):
+        if action == 'auth':
+            if self.user_code is None:
+                raise ValueError('User code not provided')
+            res = {'type': self.oath_type,
+                   'user_code': self.user_code,
+                   'credential_id': self.credential_id,
+                   }
+        elif action == 'add_creds':
+            res = {'type': self.oath_type,
+                   'credential_id': self.credential_id,
+                   'nonce': self.nonce,
+                   'aead': self.aead,
+                   'digits': self.digits,
+                   'oath_counter': self.oath_counter,
+                   }
+        for (k, v) in res.items():
+            if v is None:
+                raise ValueError('{!r} property {!r} not provided'.format(action, k))
         return res
 
 
@@ -181,7 +218,7 @@ class VCCSClient():
         a = {action:
                  {'version': 1,
                   'user_id': user_id,
-                  'factors': [x.to_dict() for x in factors],
+                  'factors': [x.to_dict(action) for x in factors],
                   }
              }
         return json.dumps(a, sort_keys=True, indent=4)
