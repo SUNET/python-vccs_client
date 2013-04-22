@@ -241,7 +241,7 @@ class VCCSClient():
         else:
             raise ValueError('Unknown response_label {!r}'.format(response_label))
         values = {'request': data}
-        body = self._execute_request_response(values)
+        body = self._execute_request_response(service, values)
 
         # parse the response
         resp = json.loads(body)
@@ -252,7 +252,7 @@ class VCCSClient():
             raise AssertionError('Received response of unknown version {!r}'.format(resp_ver))
         return resp[response_label]
 
-    def _execute_request_response(self, values):
+    def _execute_request_response(self, service, values):
         """
         The part of _execute that has actual side effects. In a separate function
         to make everything else easily testable.
@@ -268,7 +268,7 @@ class VCCSClient():
         :params factors: list of VCCSFactor instances
         :returns: request as string (JSON)
         """
-        if not action in ['auth', 'add_creds']:
+        if not action in ['auth', 'add_creds', 'revoke_creds']:
             raise ValueError('Unknown action {!r}'.format(action))
         a = {action:
                  {'version': 1,

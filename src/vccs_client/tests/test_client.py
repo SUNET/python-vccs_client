@@ -53,7 +53,7 @@ class FakeVCCSClient(vccs_client.VCCSClient):
         self.fake_response = fake_response
         vccs_client.VCCSClient.__init__(self)
 
-    def _execute_request_response(self, _values):
+    def _execute_request_response(self, _service, _values):
         return self.fake_response
 
 
