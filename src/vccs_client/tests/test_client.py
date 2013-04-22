@@ -39,8 +39,23 @@ Test VCCS client.
 
 import os
 import unittest
+import simplejson as json
 
 import vccs_client
+
+class FakeVCCSClient(vccs_client.VCCSClient):
+    """
+    Sub-class of real vccs_client.VCCSClient overriding _execute_request_response()
+    in order to fake HTTP communication.
+    """
+
+    def __init__(self, fake_response):
+        self.fake_response = fake_response
+        vccs_client.VCCSClient.__init__(self)
+
+    def _execute_request_response(self, _values):
+        return self.fake_response
+
 
 class TestVCCSClient(unittest.TestCase):
 
@@ -101,3 +116,51 @@ class TestVCCSClient(unittest.TestCase):
         # unknown to_dict 'action' should raise
         with self.assertRaises(ValueError):
             o.to_dict('bad_action')
+
+    def test_authenticate1(self):
+        """
+        Test parsing of successful authentication response.
+        """
+        resp = {'auth_response': {'version': 1,
+                                  'authenticated': True,
+                                  },
+                }
+        c = FakeVCCSClient(json.dumps(resp))
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        self.assertTrue(c.authenticate('ft@example.net', [f]))
+
+    def test_authenticate2(self):
+        """
+        Test unknown response version
+        """
+        resp = {'auth_response': {'version': 999,
+                                  },
+                }
+        c = FakeVCCSClient(json.dumps(resp))
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        with self.assertRaises(AssertionError):
+            c.authenticate('ft@example.net', [f])
+
+    def test_add_creds1(self):
+        """
+        Test parsing of successful add_creds response.
+        """
+        resp = {'add_creds_response': {'version': 1,
+                                       'success': True,
+                                       },
+                }
+        c = FakeVCCSClient(json.dumps(resp))
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        self.assertTrue(c.add_credentials('ft@example.net', [f]))
+
+    def test_add_creds2(self):
+        """
+        Test parsing of unsuccessful add_creds response.
+        """
+        resp = {'add_creds_response': {'version': 1,
+                                       'success': False,
+                                       },
+                }
+        c = FakeVCCSClient(json.dumps(resp))
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        self.assertFalse(c.add_credentials('ft@example.net', [f]))

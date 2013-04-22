@@ -241,10 +241,7 @@ class VCCSClient():
         else:
             raise ValueError('Unknown response_label {!r}'.format(response_label))
         values = {'request': data}
-        data = urllib.urlencode(values)
-        req = urllib2.Request(self.base_url + service, data)
-        response = urllib2.urlopen(req)
-        body = response.read()
+        body = self._execute_request_response(values)
 
         # parse the response
         resp = json.loads(body)
@@ -254,6 +251,16 @@ class VCCSClient():
         if resp_ver != 1:
             raise AssertionError('Received response of unknown version {!r}'.format(resp_ver))
         return resp[response_label]
+
+    def _execute_request_response(self, values):
+        """
+        The part of _execute that has actual side effects. In a separate function
+        to make everything else easily testable.
+        """
+        data = urllib.urlencode(values)
+        req = urllib2.Request(self.base_url + service, data)
+        response = urllib2.urlopen(req)
+        return response.read()
 
     def _make_request(self, action, user_id, factors):
         """
