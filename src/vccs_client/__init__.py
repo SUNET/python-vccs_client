@@ -84,13 +84,24 @@ class VCCSFactor():
     def __init__(self):
         pass
 
-    def to_dict(self):
+    def to_dict(self, _action):
         raise NotImplementedError('Sub-class must implement to_tuple')
 
 
 class VCCSPasswordFactor(VCCSFactor):
+    """
+    Object representing an ordinary password authentication factor.
+    """
 
     def __init__(self, plaintext, credential_id, salt=None, log_rounds=12):
+        """
+        :params plaintext: string, password as plaintext
+        :params credential_id: integer, unique index of credential
+        :params salt: string or None, bcrypt salt to be used for pre-hashing
+                      (if None, one will be generated)
+        :params log_rounds: integer, bcrypt iteration base
+        """
+
         if salt is None:
             salt = bcrypt.gensalt(log_rounds)
         if not salt.startswith('$2a$'):
@@ -103,6 +114,9 @@ class VCCSPasswordFactor(VCCSFactor):
         VCCSFactor.__init__(self)
 
     def to_dict(self, _action):
+        """
+        Return factor as dictionary, transmittable to authentiation backends.
+        """
         res = {'type': 'password',
                'H1': self.hash,
                'credential_id': self.credential_id,
@@ -111,9 +125,25 @@ class VCCSPasswordFactor(VCCSFactor):
 
 
 class VCCSOathFactor(VCCSFactor):
+    """
+    Object representing an OATH token authentication factor.
+    """
 
     def __init__(self, oath_type, credential_id, user_code=None, nonce=None,
                  aead=None, digits=6, oath_counter=0):
+        """
+        :params oath_type: 'oath-totp' or 'oath-hotp' (time based or event based OATH)
+        :params credential_id: integer, unique index of credential
+
+        for authentication :
+        :params user_code: integer, the user supplied token code
+
+        for initialization (add_creds) :
+        :params nonce: string, AEAD nonce
+        :params aead: string, encrypted OATH secret
+        :params digits: integer, OATH token number of digits per code (6/8)
+        :params oath_counter: initial OATH counter value of token
+        """
         if oath_type not in ['oath-totp', 'oath-hotp']:
             raise ValueError('Invalid OATH type (not oath-totp or oath-hotp)')
         self.oath_type = oath_type
@@ -126,6 +156,9 @@ class VCCSOathFactor(VCCSFactor):
         VCCSFactor.__init__(self)
 
     def to_dict(self, action):
+        """
+        Return factor as dictionary, transmittable to authentiation backends.
+        """
         if action == 'auth':
             if self.user_code is None:
                 raise ValueError('User code not provided')
@@ -155,6 +188,18 @@ class VCCSClient():
         self.base_url = base_url
 
     def authenticate(self, user_id, factors):
+        """
+        Make an authentication request for one or more factors belonging to a certain user.
+
+        The backend is intentionally secret about details for failures, and will in fact
+        return a HTTP error for many errors. The only thing that is for certain is that
+        if this function returns True, the backend considers the user properly authenticated
+        based on the provided factors.
+
+        :params user_id: persistent user identifier as string
+        :params factors: list of VCCSFactor() instances
+        :returns: boolean, success or not
+        """
         auth_req = self._make_request('auth', user_id, factors)
 
         response = self._execute(auth_req, 'auth_response')
@@ -167,6 +212,7 @@ class VCCSClient():
         """
         Ask the authentication backend to add one or more credentials to it's
         private credential store.
+
         :params user_id: persistent user identifier as string
         :params factors: list of VCCSFactor() instances
         :returns: boolean, success or not
