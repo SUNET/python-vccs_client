@@ -45,20 +45,26 @@ Add credential, and authenticate with correct password :
 
   >>> import vccs_client
   >>> f = vccs_client.VCCSPasswordFactor('password', credential_id=4712)
-  >>> a = vccs_client.VCCSClient(base_url='http://localhost:8550/')
-  >>> a.add_credentials('ft@example.net', [f])
+  >>> client = vccs_client.VCCSClient(base_url='http://localhost:8550/')
+  >>> client.add_credentials('ft@example.net', [f])
   True
   >>>>
 
 Authenticate with incorrect password :
 
-  >>> a.authenticate('ft@example.net', [f])
+  >>> client.authenticate('ft@example.net', [f])
   True
   >>> incorrect_f = vccs_client.VCCSPasswordFactor('foobar', credential_id=4712)
-  >>> a.authenticate('ft@example.net', [incorrect_f])
+  >>> client.authenticate('ft@example.net', [incorrect_f])
   False
   >>>
 
+Revoke a credential (irreversible!) :
+
+  >>> r = vccs_client.VCCSRevokeFactor(4712, 'testing revoke', reference='foobar')
+  >>> client.revoke_credentials('ft@example.net', [r])
+  True
+  >>>
 
 """
 
@@ -182,6 +188,34 @@ class VCCSOathFactor(VCCSFactor):
         return res
 
 
+class VCCSRevokeFactor(VCCSFactor):
+    """
+    Object representing a factor to be revoked.
+    """
+
+    def __init__(self, credential_id, reason, reference=''):
+        """
+        :params credential_id: integer, unique index of credential
+        :params reason: string, reason for revocation
+        :params reference: string, optional data to identify this event in logs on frontend
+        """
+
+        self.credential_id = credential_id
+        self.reason = reason
+        self.reference = reference
+        VCCSFactor.__init__(self)
+
+    def to_dict(self, _action):
+        """
+        Return factor as dictionary, transmittable to authentiation backends.
+        """
+        res = {'credential_id': self.credential_id,
+               'reason': self.reason,
+               'reference': self.reference,
+               }
+        return res
+
+
 class VCCSClient():
 
     def __init__(self, base_url='http://localhost:8550/'):
@@ -225,6 +259,23 @@ class VCCSClient():
             raise TypeError('Operation success value type error : {!r}'.format(success))
         return success == True
 
+    def revoke_credentials(self, user_id, factors):
+        """
+        Ask the authentication backend to revoke one or more credentials in it's
+        private credential store.
+
+        :params user_id: persistent user identifier as string
+        :params factors: list of VCCSRevokeFactor() instances
+        :returns: boolean, success or not
+        """
+        revoke_creds_req = self._make_request('revoke_creds', user_id, factors)
+
+        response = self._execute(revoke_creds_req, 'revoke_creds_response')
+        success = response['success']
+        if type(success) != bool:
+            raise TypeError('Operation success value type error : {!r}'.format(success))
+        return success == True
+
     def _execute(self, data, response_label):
         """
         Make a HTTP POST request to the authentication backend, and parse the result.
@@ -238,6 +289,8 @@ class VCCSClient():
             service = 'authenticate'
         elif response_label == 'add_creds_response':
             service = 'add_creds'
+        elif response_label == 'revoke_creds_response':
+            service = 'revoke_creds'
         else:
             raise ValueError('Unknown response_label {!r}'.format(response_label))
         values = {'request': data}
@@ -264,7 +317,7 @@ class VCCSClient():
 
     def _make_request(self, action, user_id, factors):
         """
-        :params action: 'auth' or 'add_creds'
+        :params action: 'auth', 'add_creds' or 'revoke_creds'
         :params factors: list of VCCSFactor instances
         :returns: request as string (JSON)
         """
