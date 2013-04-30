@@ -164,3 +164,27 @@ class TestVCCSClient(unittest.TestCase):
         c = FakeVCCSClient(json.dumps(resp))
         f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
         self.assertFalse(c.add_credentials('ft@example.net', [f]))
+
+    def test_revoke_creds1(self):
+        """
+        Test parsing of unsuccessful revoke_creds response.
+        """
+        resp = {'revoke_creds_response': {'version': 1,
+                                          'success': False,
+                                          },
+                }
+        c = FakeVCCSClient(json.dumps(resp))
+        r = vccs_client.VCCSRevokeFactor(4712, 'testing revoke', 'foobar')
+        self.assertFalse(c.revoke_credentials('ft@example.net', [r]))
+
+    def test_revoke_creds2(self):
+        """
+        Test revocation reason/reference bad types.
+        """
+        c = FakeVCCSClient(None)
+
+        with self.assertRaises(TypeError):
+            r = vccs_client.VCCSRevokeFactor(4712, 1234, 'foobar')
+
+        with self.assertRaises(TypeError):
+            r = vccs_client.VCCSRevokeFactor(4712, 'foobar', 2345)

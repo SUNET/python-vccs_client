@@ -200,6 +200,11 @@ class VCCSRevokeFactor(VCCSFactor):
         :params reference: string, optional data to identify this event in logs on frontend
         """
 
+        if not isinstance(reason, basestring):
+            raise TypeError('Revocation reason value type error : {!r}'.format(reason))
+        if not isinstance(reference, basestring):
+            raise TypeError('Revocation reference value type error : {!r}'.format(reference))
+
         self.credential_id = credential_id
         self.reason = reason
         self.reference = reference
