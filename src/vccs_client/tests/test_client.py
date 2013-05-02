@@ -89,7 +89,7 @@ class TestVCCSClient(unittest.TestCase):
         Test creating a VCCSOathFactor instance for an add_creds request.
         """
         aead = 'aa' * 20
-        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead)
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, key_handle=0x1234)
         self.assertEqual(o.to_dict('add_creds'),
                          {'aead': aead,
                           'credential_id': 4712,
@@ -97,6 +97,7 @@ class TestVCCSClient(unittest.TestCase):
                           'nonce': '010203040506',
                           'oath_counter': 0,
                           'type': 'oath-hotp',
+                          'key_handle': 0x1234,
                           }
                          )
 
@@ -110,7 +111,7 @@ class TestVCCSClient(unittest.TestCase):
         with self.assertRaises(ValueError):
             o.to_dict('add_creds')
 
-        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, user_code='123456')
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, key_handle=0x1234, user_code='123456')
         # with AEAD o should be OK
         self.assertEquals(type(o.to_dict('add_creds')), dict)
         # unknown to_dict 'action' should raise

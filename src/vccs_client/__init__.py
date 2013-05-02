@@ -158,7 +158,7 @@ class VCCSOathFactor(VCCSFactor):
         self.user_code = user_code
         self.nonce = nonce
         self.aead = aead
-        self.key_handle = key_handle,
+        self.key_handle = key_handle
         self.digits = digits
         self.oath_counter = oath_counter
         VCCSFactor.__init__(self)
