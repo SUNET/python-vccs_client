@@ -136,7 +136,7 @@ class VCCSOathFactor(VCCSFactor):
     """
 
     def __init__(self, oath_type, credential_id, user_code=None, nonce=None,
-                 aead=None, digits=6, oath_counter=0):
+                 aead=None, key_handle=None, digits=6, oath_counter=0):
         """
         :params oath_type: 'oath-totp' or 'oath-hotp' (time based or event based OATH)
         :params credential_id: integer, unique index of credential
@@ -147,6 +147,7 @@ class VCCSOathFactor(VCCSFactor):
         for initialization (add_creds) :
         :params nonce: string, AEAD nonce
         :params aead: string, encrypted OATH secret
+        :params key_handle: integer(), YubiHSM key handle used to create AEAD
         :params digits: integer, OATH token number of digits per code (6/8)
         :params oath_counter: initial OATH counter value of token
         """
@@ -157,6 +158,7 @@ class VCCSOathFactor(VCCSFactor):
         self.user_code = user_code
         self.nonce = nonce
         self.aead = aead
+        self.key_handle = key_handle,
         self.digits = digits
         self.oath_counter = oath_counter
         VCCSFactor.__init__(self)
@@ -177,6 +179,7 @@ class VCCSOathFactor(VCCSFactor):
                    'credential_id': self.credential_id,
                    'nonce': self.nonce,
                    'aead': self.aead,
+                   'key_handle': self.key_handle,
                    'digits': self.digits,
                    'oath_counter': self.oath_counter,
                    }
