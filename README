@@ -36,7 +36,13 @@ Usage :
 Create an authentication factor instance :
 
   >>> f = vccs_client.VCCSPasswordFactor('password', credential_id=4712)
+  >>> f.salt
+  '$2a$12$F0TIdfp4quhVJYIOO1ojU.'
   >>>
+
+The salt and the credential_id needs to be remembered in the client
+application for use when validating the password later on.
+
 
 Create an authentication client instance :
 
@@ -61,7 +67,8 @@ Make a subsequent authentication request for the new credential :
 
 Create a factor with an incorrect password :
 
-  >>> incorrect_f = vccs_client.VCCSPasswordFactor('foobar', credential_id=4712)
+  >>> incorrect_f = vccs_client.VCCSPasswordFactor('foobar', credential_id=4712,
+  ...       salt='$2a$12$F0TIdfp4quhVJYIOO1ojU.')
   >>>
 
 Try to authenticate with this incorrect credential :

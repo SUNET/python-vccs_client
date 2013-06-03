@@ -48,13 +48,20 @@ Add credential, and authenticate with correct password :
   >>> client = vccs_client.VCCSClient(base_url='http://localhost:8550/')
   >>> client.add_credentials('ft@example.net', [f])
   True
-  >>>>
+  >>> f.salt
+  '$2a$12$F0TIdfp4quhVJYIOO1ojU.'
+  >>>
+
+The salt and the credential_id needs to be remembered in the client
+application for use when validating the password later on.
+
 
 Authenticate with incorrect password :
 
   >>> client.authenticate('ft@example.net', [f])
   True
-  >>> incorrect_f = vccs_client.VCCSPasswordFactor('foobar', credential_id=4712)
+  >>> incorrect_f = vccs_client.VCCSPasswordFactor('foobar', credential_id=4712,
+  ...       salt='$2a$12$F0TIdfp4quhVJYIOO1ojU.')
   >>> client.authenticate('ft@example.net', [incorrect_f])
   False
   >>>
