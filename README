@@ -100,6 +100,13 @@ Multi-factor authentiation :
   >>>
 
 
+Revoke a credential (irreversible!) :
+
+  >>> r = vccs_client.VCCSRevokeFactor(4712, 'testing revoke', reference='foobar')
+  >>> client.revoke_credentials('ft@example.net', [r])
+  True
+  >>>
+
 
 ---
 
