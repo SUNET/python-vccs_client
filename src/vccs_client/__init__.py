@@ -89,6 +89,7 @@ import bcrypt
 import urllib
 import urllib2
 import simplejson as json
+from hashlib import sha512
 
 class VCCSFactor():
     """
@@ -121,7 +122,10 @@ class VCCSPasswordFactor(VCCSFactor):
             raise ValueError('Invalid salt (not bcrypt)')
         self.salt = salt
         self.credential_id = credential_id
-        bcrypt_hashed = bcrypt.hashpw(plaintext, salt)
+        # Collapse password. This avoids the bcrypt limitation of only using the
+        # first 72 characters of the password. Idea borrowed from OpenBSD bcrypt_pbkdf().
+        sha_digest = sha512(plaintext).digest()
+        bcrypt_hashed = bcrypt.hashpw(sha_digest, salt)
         # withhold bcrypt salt from authentication backends
         self.hash = bcrypt_hashed[len(salt):]
         VCCSFactor.__init__(self)

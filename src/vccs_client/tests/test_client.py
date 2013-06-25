@@ -63,11 +63,18 @@ class TestVCCSClient(unittest.TestCase):
         """
         Test creating a VCCSPasswordFactor instance.
         """
-        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        # Use output of VCCS example as second implementation :
+        # $ ./example-json  > /dev/null
+        # Full bcrypt hash : '$2a$08$Ahy51oCM6Vg6d.1ScOPxseN7QySpvi7ROMbwCejMJgRlimmD41pWS'
+        #        Plaintext : 'plaintext'
+        #        Collapsed : 'd1b9457d6b063e86a2d85215f36fc98a...'
+        #             Salt : '$2a$08$Ahy51oCM6Vg6d.1ScOPxse'
+        #               H1 : 'N7QySpvi7ROMbwCejMJgRlimmD41pWS'
+        f = vccs_client.VCCSPasswordFactor('plaintext', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
         self.assertEqual(f.to_dict('auth'),
                          {'type': 'password',
                           'credential_id': 4711,
-                          'H1': '8A5TOXW92nt0AYKipKvn2brhEyCdsT.',
+                          'H1': 'N7QySpvi7ROMbwCejMJgRlimmD41pWS',
                           }
                          )
 
