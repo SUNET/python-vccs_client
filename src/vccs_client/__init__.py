@@ -125,6 +125,10 @@ class VCCSPasswordFactor(VCCSFactor):
         # Collapse password. This avoids the bcrypt limitation of only using the
         # first 72 characters of the password. Idea borrowed from OpenBSD bcrypt_pbkdf().
         sha_digest = sha512(plaintext).digest()
+        # py-bcrypt is NULL terminated, so any \0 bytes in the digest will have to be
+        # replaced with something else. This reduces the digest space with 1/256, but
+        # is still considered better than having the arbitrary length limit.
+        sha_digest = sha_digest.replace('\0', '\1')
         bcrypt_hashed = bcrypt.hashpw(sha_digest, salt)
         # withhold bcrypt salt from authentication backends
         self.hash = bcrypt_hashed[len(salt):]
