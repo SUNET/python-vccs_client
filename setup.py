@@ -7,11 +7,11 @@ import sys, os
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README')).read()
 
-version = '0.1dev'
+version = '0.2'
 
 install_requires = [
-    'py-bcrypt >= 0.3',
-    'simplejson >= 2.6.2',
+    'py-bcrypt == 0.4',
+    'simplejson == 3.3.0',
 ]
 
 testing_extras = [

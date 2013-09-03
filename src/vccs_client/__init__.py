@@ -75,7 +75,7 @@ Revoke a credential (irreversible!) :
 
 """
 
-__version__ = '0.1'
+__version__ = '0.2'
 __copyright__ = 'NORDUnet A/S'
 __organization__ = 'NORDUnet'
 __license__ = 'BSD'
@@ -85,6 +85,7 @@ __all__ = [
     ]
 
 
+import os
 import bcrypt
 import urllib
 import urllib2
@@ -107,32 +108,51 @@ class VCCSPasswordFactor(VCCSFactor):
     Object representing an ordinary password authentication factor.
     """
 
-    def __init__(self, plaintext, credential_id, salt=None, log_rounds=12):
+    def __init__(self, plaintext, credential_id, salt=None):
         """
         :params plaintext: string, password as plaintext
         :params credential_id: integer, unique index of credential
-        :params salt: string or None, bcrypt salt to be used for pre-hashing
-                      (if None, one will be generated)
-        :params log_rounds: integer, bcrypt iteration base
+        :params salt: string or None, NDNv1H1 salt to be used for pre-hashing
+                      (if None, one will be generated. If non-default salt
+                      parameters are requested, use generate_salt() directly)
         """
 
         if salt is None:
-            salt = bcrypt.gensalt(log_rounds)
-        if not salt.startswith('$2a$'):
-            raise ValueError('Invalid salt (not bcrypt)')
+            salt = self.generate_salt()
+        if not salt.startswith('$NDNv1H1$'):
+            raise ValueError('Invalid salt (not NDNv1H1)')
         self.salt = salt
         self.credential_id = credential_id
-        # Collapse password. This avoids the bcrypt limitation of only using the
-        # first 72 characters of the password. Idea borrowed from OpenBSD bcrypt_pbkdf().
-        sha_digest = sha512(plaintext).digest()
-        # py-bcrypt is NULL terminated, so any \0 bytes in the digest will have to be
-        # replaced with something else. This reduces the digest space with 1/256, but
-        # is still considered better than having the arbitrary length limit.
-        sha_digest = sha_digest.replace('\0', '\1')
-        bcrypt_hashed = bcrypt.hashpw(sha_digest, salt)
-        # withhold bcrypt salt from authentication backends
-        self.hash = bcrypt_hashed[len(salt):]
+        salt, key_length, rounds, = self._decode_parameters(salt)
+        self.hash = bcrypt.kdf(plaintext, salt, key_length, rounds)
         VCCSFactor.__init__(self)
+
+    def generate_salt(self, salt_length=32, desired_key_length=32, rounds=2**5):
+        """
+        Generate a NDNv1H1 salt.
+
+        Encoded into the salt will be the KDF parameter values desired_key_length
+        and rounds.
+
+        For number of rounds, it is recommended that a measurement is made to achieve
+        a cost of at least 100 ms on current hardware.
+
+        :params salt_length: Number of bytes of salt to generate (recommended min 16).
+        :params desired_key_length: Length of H1 hash to produce (recommended min 32).
+        :params rounds: bcrypt pbkdf number of rounds.
+        :returns: string with salt and parameters
+        """
+        salt = os.urandom(salt_length)
+        return "$NDNv1H1${!s}${!r}${!r}$".format(salt.encode('hex'), desired_key_length, rounds)
+
+    def _decode_parameters(self, salt):
+        """
+        Internal function to decode a NDNv1H1 salt.
+        """
+        _, version, salt, desired_key_length, rounds, _ = salt.split('$')
+        if version == 'NDNv1H1':
+            return (salt.decode('hex'), int(desired_key_length), int(rounds))
+        raise NotImplementedError('Unknown hashing scheme')
 
     def to_dict(self, _action):
         """
