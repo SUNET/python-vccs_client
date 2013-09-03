@@ -63,18 +63,12 @@ class TestVCCSClient(unittest.TestCase):
         """
         Test creating a VCCSPasswordFactor instance.
         """
-        # Use output of VCCS example as second implementation :
-        # $ ./example-json  > /dev/null
-        # Full bcrypt hash : '$2a$08$Ahy51oCM6Vg6d.1ScOPxseN7QySpvi7ROMbwCejMJgRlimmD41pWS'
-        #        Plaintext : 'plaintext'
-        #        Collapsed : 'd1b9457d6b063e86a2d85215f36fc98a...'
-        #             Salt : '$2a$08$Ahy51oCM6Vg6d.1ScOPxse'
-        #               H1 : 'N7QySpvi7ROMbwCejMJgRlimmD41pWS'
-        f = vccs_client.VCCSPasswordFactor('plaintext', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        # XXX need to find test vectors created with another implementation!
+        f = vccs_client.VCCSPasswordFactor('plaintext', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
         self.assertEqual(f.to_dict('auth'),
                          {'type': 'password',
                           'credential_id': 4711,
-                          'H1': 'N7QySpvi7ROMbwCejMJgRlimmD41pWS',
+                          'H1': '29408578a86fafd2a2dc5a12',
                           }
                          )
 
@@ -134,7 +128,7 @@ class TestVCCSClient(unittest.TestCase):
                                   },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
         self.assertTrue(c.authenticate('ft@example.net', [f]))
 
     def test_authenticate2(self):
@@ -145,7 +139,7 @@ class TestVCCSClient(unittest.TestCase):
                                   },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
         with self.assertRaises(AssertionError):
             c.authenticate('ft@example.net', [f])
 
@@ -158,7 +152,7 @@ class TestVCCSClient(unittest.TestCase):
                                        },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
         self.assertTrue(c.add_credentials('ft@example.net', [f]))
 
     def test_add_creds2(self):
@@ -170,7 +164,7 @@ class TestVCCSClient(unittest.TestCase):
                                        },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        f = vccs_client.VCCSPasswordFactor('password', 4711, '$2a$08$Ahy51oCM6Vg6d.1ScOPxse')
+        f = vccs_client.VCCSPasswordFactor('password', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
         self.assertFalse(c.add_credentials('ft@example.net', [f]))
 
     def test_revoke_creds1(self):
