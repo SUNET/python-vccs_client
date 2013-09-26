@@ -68,7 +68,7 @@ class TestVCCSClient(unittest.TestCase):
         self.assertEqual(f.to_dict('auth'),
                          {'type': 'password',
                           'credential_id': 4711,
-                          'H1': '29408578a86fafd2a2dc5a12',
+                          'H1': '0b9ba6497c08106032a3337b',
                           }
                          )
 

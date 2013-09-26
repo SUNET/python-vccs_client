@@ -90,7 +90,7 @@ import bcrypt
 import urllib
 import urllib2
 import simplejson as json
-from hashlib import sha512
+
 
 class VCCSFactor():
     """
@@ -124,7 +124,8 @@ class VCCSPasswordFactor(VCCSFactor):
         self.salt = salt
         self.credential_id = credential_id
         salt, key_length, rounds, = self._decode_parameters(salt)
-        self.hash = bcrypt.kdf(plaintext, salt, key_length, rounds).encode('hex')
+        T1 = "{!s}{!s}{!s}{!s}".format(len(str(credential_id)), str(credential_id), len(plaintext), plaintext)
+        self.hash = bcrypt.kdf(T1, salt, key_length, rounds).encode('hex')
         VCCSFactor.__init__(self)
 
     def generate_salt(self, salt_length=32, desired_key_length=32, rounds=2**5):
