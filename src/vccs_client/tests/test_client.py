@@ -37,11 +37,11 @@
 Test VCCS client.
 """
 
-import os
 import unittest
 import simplejson as json
 
 import vccs_client
+
 
 class FakeVCCSClient(vccs_client.VCCSClient):
     """
@@ -112,7 +112,8 @@ class TestVCCSClient(unittest.TestCase):
         with self.assertRaises(ValueError):
             o.to_dict('add_creds')
 
-        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, key_handle=0x1234, user_code='123456')
+        o = vccs_client.VCCSOathFactor('oath-hotp', 4712, nonce='010203040506', aead=aead, key_handle=0x1234,
+                                       user_code='123456')
         # with AEAD o should be OK
         self.assertEquals(type(o.to_dict('add_creds')), dict)
         # unknown to_dict 'action' should raise
@@ -183,10 +184,10 @@ class TestVCCSClient(unittest.TestCase):
         """
         Test revocation reason/reference bad types.
         """
-        c = FakeVCCSClient(None)
+        FakeVCCSClient(None)
 
         with self.assertRaises(TypeError):
-            r = vccs_client.VCCSRevokeFactor(4712, 1234, 'foobar')
+            vccs_client.VCCSRevokeFactor(4712, 1234, 'foobar')
 
         with self.assertRaises(TypeError):
-            r = vccs_client.VCCSRevokeFactor(4712, 'foobar', 2345)
+            vccs_client.VCCSRevokeFactor(4712, 'foobar', 2345)

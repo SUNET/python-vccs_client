@@ -100,7 +100,14 @@ class VCCSFactor():
         pass
 
     def to_dict(self, _action):
-        raise NotImplementedError('Sub-class must implement to_tuple')
+        """
+        Return factor as a dict that can be serialized for sending to the
+        authentication backend.
+
+        :param _action: 'auth', 'add_creds' or 'revoke_creds'
+        :returns: dict
+        """
+        raise NotImplementedError('Sub-class must implement to_dict')
 
 
 class VCCSPasswordFactor(VCCSFactor):
@@ -110,9 +117,9 @@ class VCCSPasswordFactor(VCCSFactor):
 
     def __init__(self, plaintext, credential_id, salt=None):
         """
-        :params plaintext: string, password as plaintext
-        :params credential_id: integer, unique index of credential
-        :params salt: string or None, NDNv1H1 salt to be used for pre-hashing
+        :param plaintext: string, password as plaintext
+        :param credential_id: integer, unique index of credential
+        :param salt: string or None, NDNv1H1 salt to be used for pre-hashing
                       (if None, one will be generated. If non-default salt
                       parameters are requested, use generate_salt() directly)
         """
@@ -128,7 +135,7 @@ class VCCSPasswordFactor(VCCSFactor):
         self.hash = bcrypt.kdf(T1, salt, key_length, rounds).encode('hex')
         VCCSFactor.__init__(self)
 
-    def generate_salt(self, salt_length=32, desired_key_length=32, rounds=2**5):
+    def generate_salt(self, salt_length=32, desired_key_length=32, rounds=2 ** 5):
         """
         Generate a NDNv1H1 salt.
 
@@ -138,9 +145,9 @@ class VCCSPasswordFactor(VCCSFactor):
         For number of rounds, it is recommended that a measurement is made to achieve
         a cost of at least 100 ms on current hardware.
 
-        :params salt_length: Number of bytes of salt to generate (recommended min 16).
-        :params desired_key_length: Length of H1 hash to produce (recommended min 32).
-        :params rounds: bcrypt pbkdf number of rounds.
+        :param salt_length: Number of bytes of salt to generate (recommended min 16).
+        :param desired_key_length: Length of H1 hash to produce (recommended min 32).
+        :param rounds: bcrypt pbkdf number of rounds.
         :returns: string with salt and parameters
         """
         salt = os.urandom(salt_length)
@@ -158,6 +165,7 @@ class VCCSPasswordFactor(VCCSFactor):
     def to_dict(self, _action):
         """
         Return factor as dictionary, transmittable to authentiation backends.
+        :param _action: 'auth', 'add_creds' or 'revoke_creds'
         """
         res = {'type': 'password',
                'H1': self.hash,
@@ -174,18 +182,18 @@ class VCCSOathFactor(VCCSFactor):
     def __init__(self, oath_type, credential_id, user_code=None, nonce=None,
                  aead=None, key_handle=None, digits=6, oath_counter=0):
         """
-        :params oath_type: 'oath-totp' or 'oath-hotp' (time based or event based OATH)
-        :params credential_id: integer, unique index of credential
+        :param oath_type: 'oath-totp' or 'oath-hotp' (time based or event based OATH)
+        :param credential_id: integer, unique index of credential
 
         for authentication :
-        :params user_code: integer, the user supplied token code
+        :param user_code: integer, the user supplied token code
 
         for initialization (add_creds) :
-        :params nonce: string, AEAD nonce
-        :params aead: string, encrypted OATH secret
-        :params key_handle: integer(), YubiHSM key handle used to create AEAD
-        :params digits: integer, OATH token number of digits per code (6/8)
-        :params oath_counter: initial OATH counter value of token
+        :param nonce: string, AEAD nonce
+        :param aead: string, encrypted OATH secret
+        :param key_handle: integer(), YubiHSM key handle used to create AEAD
+        :param digits: integer, OATH token number of digits per code (6/8)
+        :param oath_counter: initial OATH counter value of token
         """
         if oath_type not in ['oath-totp', 'oath-hotp']:
             raise ValueError('Invalid OATH type (not oath-totp or oath-hotp)')
@@ -202,6 +210,7 @@ class VCCSOathFactor(VCCSFactor):
     def to_dict(self, action):
         """
         Return factor as dictionary, transmittable to authentiation backends.
+        :param action: 'auth', 'add_creds' or 'revoke_creds'
         """
         if action == 'auth':
             if self.user_code is None:
@@ -219,6 +228,9 @@ class VCCSOathFactor(VCCSFactor):
                    'digits': self.digits,
                    'oath_counter': self.oath_counter,
                    }
+        elif action == 'revoke_creds':
+            # XXX implement this
+            raise NotImplementedError()
         else:
             raise ValueError('Unknown \'action\' value (not auth or add_creds)')
         for (k, v) in res.items():
@@ -234,9 +246,9 @@ class VCCSRevokeFactor(VCCSFactor):
 
     def __init__(self, credential_id, reason, reference=''):
         """
-        :params credential_id: integer, unique index of credential
-        :params reason: string, reason for revocation
-        :params reference: string, optional data to identify this event in logs on frontend
+        :param credential_id: integer, unique index of credential
+        :param reason: string, reason for revocation
+        :param reference: string, optional data to identify this event in logs on frontend
         """
 
         if not isinstance(reason, basestring):
@@ -252,6 +264,7 @@ class VCCSRevokeFactor(VCCSFactor):
     def to_dict(self, _action):
         """
         Return factor as dictionary, transmittable to authentiation backends.
+        :param _action: string, 'auth' or 'add_creds'
         """
         res = {'credential_id': self.credential_id,
                'reason': self.reason,
@@ -261,6 +274,12 @@ class VCCSRevokeFactor(VCCSFactor):
 
 
 class VCCSClient():
+    """
+    Connection class for handling a connection to a VCCS authentication backend server.
+
+    Using this connection, requests can be made to authenticate, add or revoke
+    credentials (authentication factors).
+    """
 
     def __init__(self, base_url='http://localhost:8550/'):
         self.base_url = base_url
@@ -274,8 +293,8 @@ class VCCSClient():
         if this function returns True, the backend considers the user properly authenticated
         based on the provided factors.
 
-        :params user_id: persistent user identifier as string
-        :params factors: list of VCCSFactor() instances
+        :param user_id: persistent user identifier as string
+        :param factors: list of VCCSFactor() instances
         :returns: boolean, success or not
         """
         auth_req = self._make_request('auth', user_id, factors)
@@ -284,15 +303,15 @@ class VCCSClient():
         resp_auth = response['authenticated']
         if type(resp_auth) != bool:
             raise TypeError('Authenticated value type error : {!r}'.format(resp_auth))
-        return resp_auth == True
+        return resp_auth is True
 
     def add_credentials(self, user_id, factors):
         """
         Ask the authentication backend to add one or more credentials to it's
         private credential store.
 
-        :params user_id: persistent user identifier as string
-        :params factors: list of VCCSFactor() instances
+        :param user_id: persistent user identifier as string
+        :param factors: list of VCCSFactor() instances
         :returns: boolean, success or not
         """
         add_creds_req = self._make_request('add_creds', user_id, factors)
@@ -301,15 +320,15 @@ class VCCSClient():
         success = response['success']
         if type(success) != bool:
             raise TypeError('Operation success value type error : {!r}'.format(success))
-        return success == True
+        return success is True
 
     def revoke_credentials(self, user_id, factors):
         """
         Ask the authentication backend to revoke one or more credentials in it's
         private credential store.
 
-        :params user_id: persistent user identifier as string
-        :params factors: list of VCCSRevokeFactor() instances
+        :param user_id: persistent user identifier as string
+        :param factors: list of VCCSRevokeFactor() instances
         :returns: boolean, success or not
         """
         revoke_creds_req = self._make_request('revoke_creds', user_id, factors)
@@ -318,14 +337,14 @@ class VCCSClient():
         success = response['success']
         if type(success) != bool:
             raise TypeError('Operation success value type error : {!r}'.format(success))
-        return success == True
+        return success is True
 
     def _execute(self, data, response_label):
         """
         Make a HTTP POST request to the authentication backend, and parse the result.
 
-        :params data: request as string (JSON)
-        :params response_label: 'auth_response' or 'add_creds_response'
+        :param data: request as string (JSON)
+        :param response_label: 'auth_response' or 'add_creds_response'
         :returns: data from response identified by key response_label - supposedly a dict
         """
         # make the request
@@ -361,8 +380,8 @@ class VCCSClient():
 
     def _make_request(self, action, user_id, factors):
         """
-        :params action: 'auth', 'add_creds' or 'revoke_creds'
-        :params factors: list of VCCSFactor instances
+        :param action: 'auth', 'add_creds' or 'revoke_creds'
+        :param factors: list of VCCSFactor instances
         :returns: request as string (JSON)
         """
         if not action in ['auth', 'add_creds', 'revoke_creds']:
