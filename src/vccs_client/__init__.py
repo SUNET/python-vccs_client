@@ -115,15 +115,15 @@ class VCCSPasswordFactor(VCCSFactor):
     Object representing an ordinary password authentication factor.
     """
 
-    def __init__(self, password, credential_id, salt=None):
+    def __init__(self, password, credential_id, salt=None, strip_whitespace=True):
         """
         :param password: string, password as plaintext
-        :param credential_id: integer, unique index of credential
+        :param credential_id: string, unique index of credential
         :param salt: string or None, NDNv1H1 salt to be used for pre-hashing
                       (if None, one will be generated. If non-default salt
                       parameters are requested, use generate_salt() directly)
+        :param strip_whitespace: boolean, Remove all whitespace from input
         """
-
         if salt is None:
             salt = self.generate_salt()
         if not salt.startswith('$NDNv1H1$'):
@@ -131,6 +131,8 @@ class VCCSPasswordFactor(VCCSFactor):
         self.salt = salt
         self.credential_id = credential_id
         salt, key_length, rounds, = self._decode_parameters(salt)
+        if strip_whitespace:
+            password = ''.join(password.split())
         T1 = "{!s}{!s}{!s}{!s}".format(len(str(credential_id)), str(credential_id), len(password), password)
         self.hash = bcrypt.kdf(T1, salt, key_length, rounds).encode('hex')
         VCCSFactor.__init__(self)
