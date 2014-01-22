@@ -75,7 +75,7 @@ Revoke a credential (irreversible!) :
 
 """
 
-__version__ = '0.2.0'
+__version__ = '0.4.0'
 __copyright__ = 'NORDUnet A/S'
 __organization__ = 'NORDUnet'
 __license__ = 'BSD'
@@ -92,7 +92,35 @@ import urllib2
 import simplejson as json
 
 
-class VCCSFactor():
+class VCCSClientException(Exception):
+    """
+    Base exception class for VCCS client.
+    """
+    def __init__(self, reason):
+        Exception.__init__(self)
+        self.reason = reason
+
+
+class VCCSClientHTTPError(VCCSClientException):
+    """
+    Class to convey HTTP errors to VCCS client users in a
+    way that does not make them have to know what HTTP
+    library is used by the VCCS client.
+    """
+    def __init__(self, reason, http_code):
+        VCCSClientException.__init__(self, reason)
+        self.http_code = http_code
+
+    def __str__(self):
+        return '<{cl} instance at {addr}: {code!r} {reason!r}>'.format(
+            cl = self.__class__.__name__,
+            addr = hex(id(self)),
+            code = self.http_code,
+            reason = self.reason,
+            )
+
+
+class VCCSFactor(object):
     """
     Base class for authentication factors. Do not use directly.
     """
@@ -275,7 +303,7 @@ class VCCSRevokeFactor(VCCSFactor):
         return res
 
 
-class VCCSClient():
+class VCCSClient(object):
     """
     Connection class for handling a connection to a VCCS authentication backend server.
 
@@ -377,13 +405,18 @@ class VCCSClient():
         """
         data = urllib.urlencode(values)
         req = urllib2.Request(self.base_url + service, data)
-        response = urllib2.urlopen(req)
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.HTTPError as exc:
+            # don't want the vccs_client user to have to know what http client we use.
+            raise VCCSClientHTTPError(reason = 'Authentication backend error',
+                                      http_code = exc.getcode())
         return response.read()
 
     def _make_request(self, action, user_id, factors):
         """
         :param action: 'auth', 'add_creds' or 'revoke_creds'
-        :param factors: list of VCCSFactor instances
+        :param factors: list of VCCSFactor instance
         :returns: request as string (JSON)
         """
         if not action in ['auth', 'add_creds', 'revoke_creds']:
