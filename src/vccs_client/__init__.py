@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013 NORDUnet A/S
+# Copyright (c) 2013, 2014 NORDUnet A/S
 # All rights reserved.
 #
 #   Redistribution and use in source and binary forms, with or
@@ -35,7 +35,7 @@
 """
 the VCCS authentication client package
 
-Copyright (c) 2013 NORDUnet A/S
+Copyright (c) 2013, 2014 NORDUnet A/S
 See the source file for complete license statement.
 
 
@@ -75,7 +75,7 @@ Revoke a credential (irreversible!) :
 
 """
 
-__version__ = '0.2'
+__version__ = '0.2.0'
 __copyright__ = 'NORDUnet A/S'
 __organization__ = 'NORDUnet'
 __license__ = 'BSD'
