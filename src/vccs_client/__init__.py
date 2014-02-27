@@ -75,7 +75,7 @@ Revoke a credential (irreversible!) :
 
 """
 
-__version__ = '0.4.0'
+__version__ = '0.4.1'
 __copyright__ = 'NORDUnet A/S'
 __organization__ = 'NORDUnet'
 __license__ = 'BSD'
@@ -161,7 +161,8 @@ class VCCSPasswordFactor(VCCSFactor):
         salt, key_length, rounds, = self._decode_parameters(salt)
         if strip_whitespace:
             password = ''.join(password.split())
-        T1 = "{!s}{!s}{!s}{!s}".format(len(str(credential_id)), str(credential_id), len(password), password)
+        T1 = "{!s}{!s}{!s}{!s}".format(len(str(credential_id)), str(credential_id),
+                                       len(str(password)), str(password))
         self.hash = bcrypt.kdf(T1, salt, key_length, rounds).encode('hex')
         VCCSFactor.__init__(self)
 
