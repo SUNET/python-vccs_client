@@ -10,8 +10,8 @@ README = open(os.path.join(here, 'README')).read()
 version = '0.4.1'
 
 install_requires = [
-    'py-bcrypt == 0.4',
-    'simplejson == 3.3.0',
+    'py-bcrypt >= 0.4',
+    'simplejson >= 3.3.0',
 ]
 
 testing_extras = [
