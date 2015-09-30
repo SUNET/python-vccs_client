@@ -410,8 +410,12 @@ class VCCSClient(object):
             response = urllib2.urlopen(req)
         except urllib2.HTTPError as exc:
             # don't want the vccs_client user to have to know what http client we use.
-            raise VCCSClientHTTPError(reason = 'Authentication backend error',
-                                      http_code = exc.getcode())
+            raise VCCSClientHTTPError(reason='Authentication backend error',
+                                      http_code=exc.getcode())
+        except urllib2.URLError:
+            raise VCCSClientHTTPError(reason='Authentication backend unavailable',
+                                      http_code=503)
+
         return response.read()
 
     def _make_request(self, action, user_id, factors):
