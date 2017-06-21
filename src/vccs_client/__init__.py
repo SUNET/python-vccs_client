@@ -159,6 +159,15 @@ class VCCSPasswordFactor(VCCSFactor):
         self.salt = salt
         self.credential_id = credential_id
         salt, key_length, rounds, = self._decode_parameters(salt)
+
+        # Allow passwords containing non-ascii characters, while
+        # keeping backward-capability by converting to byte string.
+        # UTF-8 is the encoding used for POST-requests, for more info see the
+        # section handling-form-submissions-in-view-callables-unicode-and-character-set-issues
+        # at http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/views.html
+        if isinstance(password, unicode):
+            password = password.encode("UTF-8")
+
         if strip_whitespace:
             password = ''.join(password.split())
         T1 = "{!s}{!s}{!s}{!s}".format(len(str(credential_id)), str(credential_id),
