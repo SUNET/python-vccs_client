@@ -7,7 +7,7 @@ import sys, os
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README')).read()
 
-version = '0.4.3'
+version = '0.4.4'
 
 install_requires = [
     'py-bcrypt >= 0.4',
