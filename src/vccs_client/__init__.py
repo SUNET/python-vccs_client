@@ -87,8 +87,8 @@ __all__ = [
 
 import os
 import bcrypt
-import urllib
-import urllib2
+from urllib import urlencode
+from urllib2 import urlopen, Request, HTTPError, URLError
 import simplejson as json
 
 
@@ -419,15 +419,15 @@ class VCCSClient(object):
         The part of _execute that has actual side effects. In a separate function
         to make everything else easily testable.
         """
-        data = urllib.urlencode(values)
-        req = urllib2.Request(self.base_url + service, data)
+        data = urlencode(values)
+        req = Request(self.base_url + service, data)
         try:
-            response = urllib2.urlopen(req)
-        except urllib2.HTTPError as exc:
+            response = urlopen(req)
+        except HTTPError as exc:
             # don't want the vccs_client user to have to know what http client we use.
             raise VCCSClientHTTPError(reason='Authentication backend error',
                                       http_code=exc.getcode())
-        except urllib2.URLError:
+        except URLError:
             raise VCCSClientHTTPError(reason='Authentication backend unavailable',
                                       http_code=503)
 
