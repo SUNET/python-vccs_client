@@ -65,13 +65,13 @@ class FakeVCCSPasswordFactor(vccs_client.VCCSPasswordFactor):
     """
     Sub-class that overrides the get_random_bytes function to make certain things testable.
     """
-    def _get_random_bytes(self, bytes):
+    def _get_random_bytes(self, num_bytes):
         b = os.urandom(1)
         if isinstance(b, str):
             # Python2
-            return chr(0xa) * bytes
+            return chr(0xa) * num_bytes
         # Python3
-        return b'\xa0' * bytes
+        return b'\x0a' * num_bytes
 
 
 class TestVCCSClient(unittest.TestCase):
@@ -298,7 +298,7 @@ class TestVCCSClient(unittest.TestCase):
     def test_unknown_salt_version(self):
         """ Test unknown salt version """
         with self.assertRaises(ValueError):
-            f = vccs_client.VCCSPasswordFactor('anything', 4711, '$NDNvFOO$aaaaaaaaaaaaaaaa$12$32$')
+            vccs_client.VCCSPasswordFactor('anything', 4711, '$NDNvFOO$aaaaaaaaaaaaaaaa$12$32$')
 
     def test_generate_salt1(self):
         """ Test salt generation. """
