@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2014 NORDUnet A/S
+# Copyright (c) 2013, 2014, 2017 NORDUnet A/S
 # All rights reserved.
 #
 #   Redistribution and use in source and binary forms, with or
@@ -35,7 +35,7 @@
 """
 the VCCS authentication client package
 
-Copyright (c) 2013, 2014 NORDUnet A/S
+Copyright (c) 2013, 2014, 2017 NORDUnet A/S
 See the source file for complete license statement.
 
 
@@ -75,7 +75,7 @@ Revoke a credential (irreversible!) :
 
 """
 
-__version__ = '0.4.1'
+__version__ = '0.5.0b0'
 __copyright__ = 'NORDUnet A/S'
 __organization__ = 'NORDUnet'
 __license__ = 'BSD'
@@ -190,8 +190,8 @@ class VCCSPasswordFactor(VCCSFactor):
         :param rounds: bcrypt pbkdf number of rounds.
         :returns: string with salt and parameters
         """
-        salt = os.urandom(salt_length)
-        return "$NDNv1H1${!s}${!r}${!r}$".format(salt.encode('hex'), desired_key_length, rounds)
+        random = self._get_random_bytes(salt_length)
+        return "$NDNv1H1${!s}${!r}${!r}$".format(random.encode('hex'), desired_key_length, rounds)
 
     def _decode_parameters(self, salt):
         """
@@ -201,6 +201,12 @@ class VCCSPasswordFactor(VCCSFactor):
         if version == 'NDNv1H1':
             return (salt.decode('hex'), int(desired_key_length), int(rounds))
         raise NotImplementedError('Unknown hashing scheme')
+
+    def _get_random_bytes(self, bytes):
+        """
+        Internal function to make salt generation testable.
+        """
+        return os.urandom(bytes)
 
     def to_dict(self, _action):
         """

@@ -38,6 +38,7 @@
 Test VCCS client.
 """
 
+import os
 import unittest
 import simplejson as json
 
@@ -54,8 +55,23 @@ class FakeVCCSClient(vccs_client.VCCSClient):
         self.fake_response = fake_response
         vccs_client.VCCSClient.__init__(self)
 
-    def _execute_request_response(self, _service, _values):
+    def _execute_request_response(self, service, values):
+        self.last_service = service
+        self.last_values = values
         return self.fake_response
+
+
+class FakeVCCSPasswordFactor(vccs_client.VCCSPasswordFactor):
+    """
+    Sub-class that overrides the get_random_bytes function to make certain things testable.
+    """
+    def _get_random_bytes(self, bytes):
+        b = os.urandom(1)
+        if isinstance(b, str):
+            # Python2
+            return chr(0xa) * bytes
+        # Python3
+        return b'\xa0' * bytes
 
 
 class TestVCCSClient(unittest.TestCase):
@@ -187,25 +203,49 @@ class TestVCCSClient(unittest.TestCase):
         """
         Test parsing of successful add_creds response.
         """
+        credential_id = 4711
+        userid = 'ft@example.net'
+        password = 'secret'
         resp = {'add_creds_response': {'version': 1,
                                        'success': True,
                                        },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        f = vccs_client.VCCSPasswordFactor('password', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
-        self.assertTrue(c.add_credentials('ft@example.net', [f]))
+        f = vccs_client.VCCSPasswordFactor(password, credential_id, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
+        add_result = c.add_credentials(userid, [f])
+        self.assertTrue(add_result)
+        self.assertEqual(c.last_service, 'add_creds')
+        values = json.loads(c.last_values['request'])
+        expected = {'add_creds': {
+            'version': 1,
+            'user_id': userid,
+            'factors': [{'credential_id': credential_id, 'H1': '6520c816376fd8ee6299ff31', 'type': 'password'}],
+        }}
+        self.assertEqual(expected, values)
 
     def test_add_creds1_utf8(self):
         """
         Test parsing of successful add_creds response with a password in UTF-8.
         """
+        credential_id = 4711
+        userid = 'ft@example.net'
+        password = 'passwordåäöхэж'
         resp = {'add_creds_response': {'version': 1,
                                        'success': True,
                                        },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        f = vccs_client.VCCSPasswordFactor('passwordåäöхэж', 4711, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
-        self.assertTrue(c.add_credentials('ft@example.net', [f]))
+        f = vccs_client.VCCSPasswordFactor(password, credential_id, '$NDNv1H1$aaaaaaaaaaaaaaaa$12$32$')
+        add_result = c.add_credentials(userid, [f])
+        self.assertTrue(add_result)
+        self.assertEqual(c.last_service, 'add_creds')
+        values = json.loads(c.last_values['request'])
+        expected = {'add_creds': {
+            'version': 1,
+            'user_id': userid,
+            'factors': [{'credential_id': credential_id, 'H1': '80e6759a26bb9d439bc77d52', 'type': 'password'}],
+        }}
+        self.assertEqual(expected, values)
 
     def test_add_creds2(self):
         """
@@ -254,3 +294,28 @@ class TestVCCSClient(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             vccs_client.VCCSRevokeFactor(4712, 'foobar', 2345)
+
+    def test_unknown_salt_version(self):
+        """ Test unknown salt version """
+        with self.assertRaises(ValueError):
+            f = vccs_client.VCCSPasswordFactor('anything', 4711, '$NDNvFOO$aaaaaaaaaaaaaaaa$12$32$')
+
+    def test_generate_salt1(self):
+        """ Test salt generation. """
+        f = vccs_client.VCCSPasswordFactor('anything', 4711)
+        self.assertEqual(len(f.salt), 80)
+        random, length, rounds = f._decode_parameters(f.salt)
+        self.assertEqual(length, 32)
+        self.assertEqual(rounds, 32)
+        self.assertEqual(len(random), length)
+
+    def test_generate_salt2(self):
+        """ Test salt generation with fake RNG. """
+
+        f = FakeVCCSPasswordFactor('anything', 4711)
+        self.assertEqual(len(f.salt), 80)
+        random, length, rounds = f._decode_parameters(f.salt)
+        self.assertEqual(length, 32)
+        self.assertEqual(rounds, 32)
+        self.assertEqual(len(random), length)
+        self.assertEqual(f.salt, '$NDNv1H1$0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a$32$32$')
