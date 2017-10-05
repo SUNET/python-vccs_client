@@ -1,3 +1,4 @@
+#-*- encoding: utf-8 -*-
 #
 # Copyright (c) 2013, 2014, 2017 NORDUnet A/S
 # All rights reserved.
@@ -86,9 +87,12 @@ __all__ = [
 
 
 import os
+import six
 import bcrypt
-from urllib import urlencode
-from urllib2 import urlopen, Request, HTTPError, URLError
+from six.moves.urllib.parse import urlencode
+from six.moves.urllib.request import urlopen, Request
+from six.moves.urllib.error import HTTPError, URLError
+from six import string_types
 import simplejson as json
 
 
@@ -146,33 +150,53 @@ class VCCSPasswordFactor(VCCSFactor):
     def __init__(self, password, credential_id, salt=None, strip_whitespace=True):
         """
         :param password: string, password as plaintext
-        :param credential_id: string, unique index of credential
+        :param credential_id: int, unique index of credential
         :param salt: string or None, NDNv1H1 salt to be used for pre-hashing
                       (if None, one will be generated. If non-default salt
                       parameters are requested, use generate_salt() directly)
         :param strip_whitespace: boolean, Remove all whitespace from input
+
+        :type password: string_types
+        :type credential_id: int
+        :type salt: None | string_types
+        :type strip_whitespace: bool
         """
         if salt is None:
             salt = self.generate_salt()
         if not salt.startswith('$NDNv1H1$'):
             raise ValueError('Invalid salt (not NDNv1H1)')
         self.salt = salt
+        if not isinstance(credential_id, int):
+            raise ValueError('Non-integer credential id: {!r}'.format(credential_id))
         self.credential_id = credential_id
         salt, key_length, rounds, = self._decode_parameters(salt)
 
-        # Allow passwords containing non-ascii characters, while
-        # keeping backward-capability by converting to byte string.
-        # UTF-8 is the encoding used for POST-requests, for more info see the
-        # section handling-form-submissions-in-view-callables-unicode-and-character-set-issues
-        # at http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/views.html
-        if isinstance(password, unicode):
-            password = password.encode("UTF-8")
-
+        cid_str = str(self.credential_id)
         if strip_whitespace:
             password = ''.join(password.split())
-        T1 = "{!s}{!s}{!s}{!s}".format(len(str(credential_id)), str(credential_id),
-                                       len(str(password)), str(password))
-        self.hash = bcrypt.kdf(T1, salt, key_length, rounds).encode('hex')
+        if six.PY2:
+            # Allow passwords containing non-ascii characters, while
+            # keeping backward-capability by converting to byte string.
+            # UTF-8 is the encoding used for POST-requests, for more info see the
+            # section handling-form-submissions-in-view-callables-unicode-and-character-set-issues
+            # at http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/views.html
+            if isinstance(password, unicode):
+                password = password.encode('UTF-8')
+            T1 = "{!s}{!s}{!s}{!s}".format(len(cid_str), cid_str,
+                                           len(password), password)
+        else:
+            password = bytes(password, 'utf-8')
+            T1 = "{!s}{!s}{!s}".format(len(cid_str), cid_str, len(password))
+            T1 = bytes(T1, 'utf-8') + password
+
+        # password = '4471120passwordåäöхэж' (T1 as hex:'3434373131323070617373776f7264c3a5c3a4c3b6d185d18dd0b6')
+        # should give res == '80e6759a26bb9d439bc77d52'
+        res = bcrypt.kdf(T1, salt, key_length, rounds)
+        if six.PY2:
+            res = res.encode('hex')
+        else:
+            res = res.hex()
+        self.hash = res
         VCCSFactor.__init__(self)
 
     def generate_salt(self, salt_length=32, desired_key_length=32, rounds=2 ** 5):
@@ -191,7 +215,12 @@ class VCCSPasswordFactor(VCCSFactor):
         :returns: string with salt and parameters
         """
         random = self._get_random_bytes(salt_length)
-        return "$NDNv1H1${!s}${!r}${!r}$".format(random.encode('hex'), desired_key_length, rounds)
+        if six.PY2:
+            random_str = random.encode('hex')
+        else:
+            random_str = random.hex()
+
+        return "$NDNv1H1${!s}${!r}${!r}$".format(random_str, desired_key_length, rounds)
 
     def _decode_parameters(self, salt):
         """
@@ -199,7 +228,11 @@ class VCCSPasswordFactor(VCCSFactor):
         """
         _, version, salt, desired_key_length, rounds, _ = salt.split('$')
         if version == 'NDNv1H1':
-            return (salt.decode('hex'), int(desired_key_length), int(rounds))
+            if six.PY2:
+                salt = salt.decode('hex')
+            else:
+                salt = bytes().fromhex(salt)
+            return salt, int(desired_key_length), int(rounds)
         raise NotImplementedError('Unknown hashing scheme')
 
     def _get_random_bytes(self, bytes):
@@ -257,6 +290,9 @@ class VCCSOathFactor(VCCSFactor):
         """
         Return factor as dictionary, transmittable to authentiation backends.
         :param action: 'auth', 'add_creds' or 'revoke_creds'
+
+        :returns: Factor in dict format
+        :rtype: dict
         """
         if action == 'auth':
             if self.user_code is None:
@@ -292,14 +328,19 @@ class VCCSRevokeFactor(VCCSFactor):
 
     def __init__(self, credential_id, reason, reference=''):
         """
-        :param credential_id: integer, unique index of credential
-        :param reason: string, reason for revocation
-        :param reference: string, optional data to identify this event in logs on frontend
-        """
+        :param credential_id: unique index of credential
+        :param reason: reason for revocation
+        :param reference: optional data to identify this event in logs on frontend
 
-        if not isinstance(reason, basestring):
+        :type credential_id: int
+        :type reason: string_types
+        :type reference: string_types
+        """
+        if not isinstance(credential_id, int):
+            raise TypeError('Revocation credential_id value type error : {!r}'.format(credential_id))
+        if not isinstance(reason, string_types):
             raise TypeError('Revocation reason value type error : {!r}'.format(reason))
-        if not isinstance(reference, basestring):
+        if not isinstance(reference, string_types):
             raise TypeError('Revocation reference value type error : {!r}'.format(reference))
 
         self.credential_id = credential_id
@@ -339,9 +380,14 @@ class VCCSClient(object):
         if this function returns True, the backend considers the user properly authenticated
         based on the provided factors.
 
-        :param user_id: persistent user identifier as string
-        :param factors: list of VCCSFactor() instances
-        :returns: boolean, success or not
+        :param user_id: persistent user identifier
+        :param factors: Factors to authenticate
+
+        :type user_id: string_types
+        :type factors: list of VCCSFactor
+
+        :returns: success or not
+        :rtype: bool
         """
         auth_req = self._make_request('auth', user_id, factors)
 
@@ -373,9 +419,14 @@ class VCCSClient(object):
         Ask the authentication backend to revoke one or more credentials in it's
         private credential store.
 
-        :param user_id: persistent user identifier as string
-        :param factors: list of VCCSRevokeFactor() instances
-        :returns: boolean, success or not
+        :param user_id: persistent user identifier
+        :param factors: Factors to revoke
+
+        :type user_id: string_types
+        :type factors: list of VCCSRevokeFactor
+
+        :returns: success or not
+        :rtype: bool
         """
         revoke_creds_req = self._make_request('revoke_creds', user_id, factors)
 
@@ -439,7 +490,7 @@ class VCCSClient(object):
         :param factors: list of VCCSFactor instance
         :returns: request as string (JSON)
         """
-        if not action in ['auth', 'add_creds', 'revoke_creds']:
+        if action not in ['auth', 'add_creds', 'revoke_creds']:
             raise ValueError('Unknown action {!r}'.format(action))
         a = {action:
                  {'version': 1,
