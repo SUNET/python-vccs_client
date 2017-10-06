@@ -88,6 +88,7 @@ __all__ = [
 
 import os
 import six
+import bson
 import bcrypt
 from six.moves.urllib.parse import urlencode
 from six.moves.urllib.request import urlopen, Request
@@ -150,14 +151,14 @@ class VCCSPasswordFactor(VCCSFactor):
     def __init__(self, password, credential_id, salt=None, strip_whitespace=True):
         """
         :param password: string, password as plaintext
-        :param credential_id: int, unique index of credential
+        :param credential_id: unique id of credential in the authentication backend databas
         :param salt: string or None, NDNv1H1 salt to be used for pre-hashing
                       (if None, one will be generated. If non-default salt
                       parameters are requested, use generate_salt() directly)
         :param strip_whitespace: boolean, Remove all whitespace from input
 
         :type password: string_types
-        :type credential_id: int
+        :type credential_id: string_types | bson.ObjectId
         :type salt: None | string_types
         :type strip_whitespace: bool
         """
@@ -166,8 +167,11 @@ class VCCSPasswordFactor(VCCSFactor):
         if not salt.startswith('$NDNv1H1$'):
             raise ValueError('Invalid salt (not NDNv1H1)')
         self.salt = salt
-        if not isinstance(credential_id, int):
-            raise ValueError('Non-integer credential id: {!r}'.format(credential_id))
+        if isinstance(credential_id, bson.ObjectId):
+            # backwards compatibility
+            credential_id = str(credential_id)
+        if not isinstance(credential_id, string_types):
+            raise ValueError('Non-string credential id: {!r}'.format(credential_id))
         self.credential_id = credential_id
         salt, key_length, rounds, = self._decode_parameters(salt)
 
