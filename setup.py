@@ -12,6 +12,8 @@ version = '0.4.5b0'
 install_requires = [
     'py-bcrypt >= 0.4',
     'simplejson >= 3.3.0',
+    'pymongo >= 2.8.0, < 3.0',
+    'six >= 1.11.0',
 ]
 
 testing_extras = [
