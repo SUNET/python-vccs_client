@@ -336,7 +336,7 @@ class VCCSRevokeFactor(VCCSFactor):
         :param reason: reason for revocation
         :param reference: optional data to identify this event in logs on frontend
 
-        :type credential_id: int
+        :type credential_id: string_types | bson.ObjectId
         :type reason: string_types
         :type reference: string_types
         """
