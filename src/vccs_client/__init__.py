@@ -340,8 +340,11 @@ class VCCSRevokeFactor(VCCSFactor):
         :type reason: string_types
         :type reference: string_types
         """
-        if not isinstance(credential_id, int):
-            raise TypeError('Revocation credential_id value type error : {!r}'.format(credential_id))
+        if isinstance(credential_id, bson.ObjectId):
+            # backwards compatibility
+            credential_id = str(credential_id)
+        if not isinstance(credential_id, string_types):
+            raise TypeError('Non-string credential id: {!r}'.format(credential_id))
         if not isinstance(reason, string_types):
             raise TypeError('Revocation reason value type error : {!r}'.format(reason))
         if not isinstance(reference, string_types):

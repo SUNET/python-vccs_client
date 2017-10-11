@@ -280,7 +280,7 @@ class TestVCCSClient(unittest.TestCase):
                                           },
                 }
         c = FakeVCCSClient(json.dumps(resp))
-        r = vccs_client.VCCSRevokeFactor(4712, 'testing revoke', 'foobar')
+        r = vccs_client.VCCSRevokeFactor('4712', 'testing revoke', 'foobar')
         self.assertFalse(c.revoke_credentials('ft@example.net', [r]))
 
     def test_revoke_creds2(self):
