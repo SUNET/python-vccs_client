@@ -7,12 +7,12 @@ import sys, os
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README')).read()
 
-version = '0.4.5'
+version = '0.4.6'
 
 install_requires = [
     'py-bcrypt >= 0.4',
     'simplejson >= 3.3.0',
-    'pymongo >= 2.8.0, < 3.0',
+    'pymongo >= 3.6',
     'six',
 ]
 
