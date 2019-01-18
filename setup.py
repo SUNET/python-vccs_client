@@ -7,7 +7,7 @@ import sys, os
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README')).read()
 
-version = '0.4.6'
+version = '0.4.7'
 
 install_requires = [
     'py-bcrypt >= 0.4',
@@ -17,9 +17,9 @@ install_requires = [
 ]
 
 testing_extras = [
-    'nose==1.2.1',
-    'nosexcover==1.0.8',
-    'coverage==3.6',
+    'nose>=1.2.1',
+    'nosexcover>=1.0.8',
+    'coverage>=3.6',
 ]
 
 setup(name='vccs_client',

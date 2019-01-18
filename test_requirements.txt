@@ -1,0 +1,4 @@
+-r requirements.txt
+coverage>=3.6
+nose>=1.2.1
+nosexcover>=1.0.8
