@@ -478,6 +478,8 @@ class VCCSClient(object):
         to make everything else easily testable.
         """
         data = urlencode(values)
+        if six.PY3:
+            data = data.encode('utf8')
         req = Request(self.base_url + service, data)
         try:
             response = urlopen(req)
