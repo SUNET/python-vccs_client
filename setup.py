@@ -17,8 +17,8 @@ install_requires = [
 ]
 
 testing_extras = [
-    'pytest>=5.2.0'
-    'pytest-cov>=2.7.1'
+    'pytest>=5.2.0',
+    'pytest-cov>=2.7.1',
 ]
 
 setup(name='vccs_client',

@@ -7,3 +7,4 @@ install:
 # command to run tests
 script:
   - pytest
+  - mypy --ignore-missing-imports src/vccs_client
