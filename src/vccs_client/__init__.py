@@ -76,25 +76,25 @@ Revoke a credential (irreversible!) :
 
 """
 
+import os
+from typing import List, Any
+
+import bcrypt
+import bson
+import simplejson as json
+import six
+from six import string_types
+from six.moves.urllib.error import HTTPError, URLError
+from six.moves.urllib.parse import urlencode
+from six.moves.urllib.request import urlopen, Request
+
 __version__ = '0.5.0b0'
 __copyright__ = 'NORDUnet A/S'
 __organization__ = 'NORDUnet'
 __license__ = 'BSD'
 __authors__ = ['Fredrik Thulin']
 
-__all__ = [
-    ]
-
-
-import os
-import six
-import bson
-import bcrypt
-from six.moves.urllib.parse import urlencode
-from six.moves.urllib.request import urlopen, Request
-from six.moves.urllib.error import HTTPError, URLError
-from six import string_types
-import simplejson as json
+__all__: List[Any] = []
 
 
 class VCCSClientException(Exception):
