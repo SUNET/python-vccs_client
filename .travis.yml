@@ -1,10 +1,10 @@
 language: python
 python:
-  - "2.7"
-  - "3.5"
+  - "3.7"
 install:
-  - python setup.py develop
-  - pip install nosexcover
+  - pip install -U setuptools wheel mypy
+  - python setup.py testing
 # command to run tests
 script:
-  - nosetests
+  - pytest
+  - mypy --ignore-missing-imports src/vccs_client
