@@ -11,7 +11,7 @@ publish_over_ssh:
 script:
   - "python3.7 -m venv venv"
   - ". venv/bin/activate"
-  - "pip install --upgrade setuptools pip wheel"
+  - "pip install --upgrade setuptools pip wheel mypy"
   - "python setup.py testing"
   - "pytest"
   - "mypy --ignore-missing-imports src/vccs_client"
